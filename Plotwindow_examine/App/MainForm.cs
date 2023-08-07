@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (C) 2022 mocchi
+// License: Boost Software License   See LICENSE.txt for the full license.
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;

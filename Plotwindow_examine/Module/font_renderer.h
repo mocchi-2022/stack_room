@@ -1,21 +1,21 @@
+// Copyright (C) 2006,2022 mocchi
+// License: Boost Software License   See LICENSE.txt for the full license.
 #ifndef FONT_RENDERER_H_
 #define FONT_RENDERER_H_
 
-#include <map>
-#include <memory>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <clocale>
+#include <cstdint>
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <locale.h>
-#include <stdint.h>
+#include "mist/mist.h"
+#include "mist/config/color.h"
 
 #if defined(WIN32)
 #include <windows.h>
 #include <mbstring.h>
-#elif defined(POSIX)
-#include <stdio.h>
-#include <string.h>
+#elif defined(LINUX)
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xlocale.h>
@@ -32,10 +32,19 @@ namespace font_renderer {
 	template <> struct input2native_trait<char>{
 		typedef char type_t;
 	};
-	template <> struct input2native_trait<wchar_t>{
+	template <> struct input2native_trait<const char> {
+		typedef char type_t;
+	};
+	template <> struct input2native_trait<wchar_t> {
+		typedef wchar_t type_t;
+	};
+	template <> struct input2native_trait<const wchar_t>{
 		typedef wchar_t type_t;
 	};
 	template <> struct input2native_trait<uint32_t>{
+		typedef wchar_t type_t;
+	};
+	template <> struct input2native_trait<const uint32_t> {
 		typedef wchar_t type_t;
 	};
 #endif
@@ -58,10 +67,10 @@ namespace font_renderer {
 	template <int N> struct create_helper{ };
 	template <> struct create_helper<1>{
 		typedef char type_t;
-		type_t *istr;
+		const type_t *istr;
 		int len;
-		create_helper(char *str){
-			len = (int)strlen(str);
+		create_helper(const char *str){
+			len = (int)std::strlen(str);
 			istr = str;
 		}
 		~create_helper(){}
@@ -80,19 +89,19 @@ namespace font_renderer {
 		}
 
 		typedef wchar_t type_t;
-		type_t *istr;
+		const type_t *istr;
 		bool allocated;
 		int len;
-		create_helper(wchar_t *str){
+		create_helper(const wchar_t *str){
 			allocated = false;
 			len = (int)wcslen(str);
 			istr = str;
 		}
-		create_helper(uint32_t *str){
+		create_helper(const uint32_t *str){
 			allocated = true;
 			len = 0;
 			int unicount = 0;
-			uint32_t *p = str;
+			const uint32_t *p = str;
 			while(*p){
 				if (*p > 0xffff){
 					len += 2;
@@ -102,7 +111,7 @@ namespace font_renderer {
 				unicount++;
 				p++;
 			}
-			istr = new wchar_t[len+1];
+			wchar_t *istr = new wchar_t[len+1];
 			for (int i = 0, wi = 0; i < unicount; ++i){
 				uint32_t high, low;
 				if (str[i] > 0xffff){
@@ -115,6 +124,7 @@ namespace font_renderer {
 				}
 			}
 			istr[len] = L'\0';
+			this->istr = istr;
 		}
 
 		~create_helper(){
@@ -136,20 +146,27 @@ namespace font_renderer {
 
 	class font_renderer{
 	public:
-
+#if 0
 		struct rgb_type{
 			byte r, g, b;
 			rgb_type() : r(0), g(0), b(0){};
 			rgb_type(byte r_, byte g_, byte b_) : r(r_), g(g_), b(b_){};
 		};
+#else
+		typedef mist::rgb<uint8_t> rgb_type;
+		typedef mist::array2<rgb_type> array2_type;
+#endif
 	private:
-
+#if 0
 		byte *image;
+#endif
 		int width, height;
 		void destroy(){
 			width = height = 0;
+#if 0
 			delete image;
 			image = 0;
+#endif
 		}
 		struct vals_internal{
 			int width, height;
@@ -296,7 +313,7 @@ namespace font_renderer {
 			~vals_internal(){
 				destroy();
 			}
-#elif defined(POSIX)
+#elif defined(LINUX)
 			XImage *ximg;
 			Display *d;
 			GC gc;
@@ -463,7 +480,11 @@ namespace font_renderer {
 		int ascender, descender;
 		vals_internal *vi;
 	public:
+#if 0
 		font_renderer() : image(0), width(0), height(0){
+#else
+		font_renderer() : width(0), height(0) {
+#endif
 			ascender = descender = 0;
 			vi = NULL;
 		}
@@ -472,7 +493,7 @@ namespace font_renderer {
 			render(str, height_want, italic, bold, fixed, background, foreground);
 		}
 
-		template<typename T> void render(T *str, int height_want,
+		template<typename T> void render(T *str, array2_type &dest, int height_want,
 										 bool italic = false, bool bold = false, bool fixed = false,
 										 rgb_type background = rgb_type(0,0,0), rgb_type foreground = rgb_type(255,255,255)){
 			if (vi == NULL){
@@ -481,23 +502,34 @@ namespace font_renderer {
 				vi->create(str, height_want, italic, bold, fixed, background, foreground);
 			}
 			width = vi->width, height = vi->height;
-			if (image) delete image;
-			image = new byte[width * height * 3];
 			ascender = vi->get_ascender();
 			descender = vi->get_descender();
-
+#if 0
+			if (image) delete image;
+			image = new byte[width * height * 3];
 			int h = height, w = width;
-			for (int j = 0, i3 = 0; j < h; ++j){
-				for (int i = 0; i < w; ++i, i3 += 3){
-					vi->get_pixel(i, j, image[i3], image[i3+1], image[i3+2]);
+			for (int j = 0, i3 = 0; j < h; ++j) {
+				for (int i = 0; i < w; ++i, i3 += 3) {
+					vi->get_pixel(i, j, image[i3], image[i3 + 1], image[i3 + 2]);
 				}
 			}
+#else
+			dest.resize(width, height);
+			for (int j = 0; j < height; ++j) {
+				auto dest_j = dest.y_begin(j);
+				for (int i = 0; i < width; ++i) {
+					auto &rgb = dest_j[i];
+					vi->get_pixel(i, j, rgb.r, rgb.g, rgb.b);
+				}
+			}
+#endif
 		}
 
 		~font_renderer(){
 			if (vi) delete vi;
 			destroy();
 		}
+#if 0
 		int get_width(){
 			return width;
 		}
@@ -514,6 +546,7 @@ namespace font_renderer {
 		const byte *get_image(){
 			return image;
 		}
+#endif
 	};
 }
 

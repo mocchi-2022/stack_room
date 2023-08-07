@@ -1,6 +1,10 @@
+Ôªø// Copyright (C) 2022 mocchi
+// License: Boost Software License   See LICENSE.txt for the full license.
+
 #define DLLEXPORT extern "C" __declspec(dllexport)
 
 #include <cstdint>
+#include <unordered_map>
 
 #include <windows.h>
 
@@ -15,6 +19,7 @@
 #include "mist/drawing.h"
 #include "stb_image.h"
 #include "font_renderer.h"
+#include "PPlot.h"
 
 struct stb_image {
 	typedef mist::rgba<uint8_t> color_type;
@@ -34,16 +39,101 @@ struct stb_image {
 		if (!stb_buf) return;
 		new (&rgba) mist::array2<color_type>(width, height, static_cast<color_type *>(stb_buf), width * height * 4);
 	}
-	const color_type &operator () (int x, int y) const{
-		if (x < 0 || y < 0 || x >= rgba.width() || y >= rgba.height()) return color_type();
-		return rgba(x, y);
+};
+
+typedef mist::bgra<uint8_t> canvas_color_type;
+typedef mist::array2<canvas_color_type> canvas_type;
+class CanvasPainter : public Painter {
+public:
+	typedef canvas_color_type color_type;
+	mist::array2<canvas_color_type> *canvas;
+	color_type color_line, color_fill;
+	font_renderer::font_renderer fr;
+	std::unordered_map<std::string, font_renderer::font_renderer::array2_type> font_cache;
+
+	CanvasPainter() {
+		color_line = color_type(0, 0, 0);
+		color_fill = color_type(255, 255, 255);
+		canvas = nullptr;
+	}
+	void ResetCache() {
+		font_cache.clear();
+	}
+	virtual void DrawLine(int inX1, int inY1, int inX2, int inY2) {
+		if (!canvas) return;
+		mist::draw_line(*canvas, inX1, inY1, inX2, inY2, color_line);
+	}
+	virtual void FillRect(int inX, int inY, int inW, int inH) {
+		if (!canvas) return;
+		mist::fill_rect(*canvas, inX, inY, inW, inH, color_fill);
+	}
+	virtual void SetClipRect(int inX, int inY, int inW, int inH) {
+		// ÂÆüË£Ö„Åó„Å™„ÅÑ
+	}
+	virtual long GetWidth() const {
+		if (!canvas) return 0;
+		return static_cast<long>(canvas->width());
+	}
+	virtual long GetHeight() const {
+		if (!canvas) return 0;
+		return static_cast<long>(canvas->height());
+	}
+	virtual void SetLineColor(int inR, int inG, int inB) {
+		color_line.r = inR, color_line.g = inG, color_line.b = inB;
+	}
+	virtual void SetFillColor(int inR, int inG, int inB) {
+		color_fill.r = inR, color_fill.g = inG, color_fill.b = inB;
+	}
+
+	font_renderer::font_renderer::array2_type &GetTextArray(const char *inString) {
+		auto &text_arr = font_cache[inString];
+		if (text_arr.size() == 0) fr.render(inString, text_arr, GetFontHeight(), false, false, true, color_type(255, 255, 255), color_line);
+		return text_arr;
+	}
+	virtual long CalculateTextDrawSize(const char *inString) {
+		auto &text_arr = GetTextArray(inString);
+		return static_cast<int>(text_arr.width());
+	}
+	virtual long GetFontHeight() const {
+		return 12;
+	}
+	virtual void DrawText(int inX, int inY, const char *inString) {
+		if (!canvas) return;
+		auto &text_arr = GetTextArray(inString);
+
+		int x_offset = inX, y_offset = inY - GetFontHeight();
+		int txt_h = static_cast<int>(text_arr.height()), txt_w = static_cast<int>(text_arr.width());
+		for (int j = 0, ji_fr = 0; j < txt_h; ++j, ji_fr += txt_w) {
+			if (j + y_offset < 0) continue;
+			else if (j + y_offset >= canvas->height()) break;
+			auto canvas_y = canvas->y_begin(j + y_offset);
+			for (int i = 0; i < txt_w; ++i) {
+				if (i + x_offset >= canvas->width()) break;
+				canvas_y[i + x_offset] = text_arr[ji_fr + i];
+			}
+		}
+	}
+	virtual void DrawRotatedText(int inX, int inY, const char *inString) {
+		if (!canvas) return;
+		auto &text_arr = GetTextArray(inString);
+
+		int x_offset = inX - GetFontHeight(), y_offset = inY;
+		int txt_h = static_cast<int>(text_arr.height()), txt_w = static_cast<int>(text_arr.width());
+		for (int j = -(txt_w - 1), j_fr = txt_w - 1; j <= 0; ++j, --j_fr) {
+			if (j + y_offset < 0) continue;
+			else if (j + y_offset >= canvas->height()) break;
+			auto canvas_y = canvas->y_begin(j + y_offset);
+			for (int i = 0, i_fr = 0; i < txt_h; ++i, i_fr += txt_w) {
+				if (i + x_offset >= canvas->width()) break;
+				canvas_y[i + x_offset] = text_arr[j_fr + i_fr];
+			}
+		}
 	}
 };
 
 struct Application {
 	stb_image img_data;
 
-	font_renderer::font_renderer fr;
 	struct ViewInfo {
 		HDC hDC;
 		double zoom;
@@ -51,7 +141,7 @@ struct Application {
 		int grab_x, grab_y, grab_dx, grab_dy, image_dx, image_dy;
 		int view_width, view_height;
 		struct chart_area {
-			const int plotarea_left = 10, plotarea_top = 5, offset_right = 20, offset_bottom = 30;
+			static const int plotarea_left = 50, plotarea_top = 5, offset_right = 20, offset_bottom = 30;
 			int plotarea_width, plotarea_height;
 			void update(int view_width, int view_height) {
 				plotarea_width = view_width - (plotarea_left + offset_right);
@@ -62,7 +152,12 @@ struct Application {
 			}
 		}ca;
 	}vi;
+	struct PlotInfo {
+		PPlot plot;
+		CanvasPainter painter;
+	}pi;
 };
+
 
 DLLEXPORT Application *Application_New() {
 	return new Application();
@@ -72,7 +167,7 @@ DLLEXPORT void Application_Delete(Application *app) {
 	delete app;
 }
 
-// ==== ÉrÉÖÅ[ÇÃèàóù ====
+// ==== „Éì„É•„Éº„ÅÆÂá¶ÁêÜ ====
 
 DLLEXPORT void Application_View_Init(Application *app, HWND hWnd, const char *imagefile_path) {
 	app->img_data.load(imagefile_path);
@@ -80,23 +175,54 @@ DLLEXPORT void Application_View_Init(Application *app, HWND hWnd, const char *im
 	app->vi.grabbing = false;
 	app->vi.image_dx = 0, app->vi.image_dy = 0;
 	app->vi.hDC = ::GetDC(hWnd);
+
+	app->pi.plot.mPlotDataContainer.AddXYPlot(new PlotData(), new PlotData(), new LegendData());
+	app->pi.painter.ResetCache();
+
+	auto &margin = app->pi.plot.mMargins;
+	margin.mLeft = app->vi.ca.plotarea_left;
+	margin.mRight = app->vi.ca.offset_right;
+	margin.mTop = app->vi.ca.plotarea_top;
+	margin.mBottom = app->vi.ca.offset_bottom;
+
+	auto &xaxis = app->pi.plot.mXAxisSetup;
+	xaxis.mLogScale = false;
+	xaxis.mCrossOrigin = false;
+	xaxis.mTickInfo.mAutoTick = false;
+	xaxis.mTickInfo.mMajorTickSpan = 50;
+	xaxis.mAutoScaleMax = false;
+	xaxis.mAutoScaleMin = false;
+	xaxis.mLabel = "„ÉÜ„Çπ„Éà";
+	auto &yaxis = app->pi.plot.mYAxisSetup;
+	yaxis.mLogScale = false;
+	yaxis.mAscending = true;
+	yaxis.mCrossOrigin = false;
+	yaxis.mTickInfo.mAutoTick = false;
+	yaxis.mTickInfo.mMajorTickSpan = 50;
+	yaxis.mAutoScaleMax = false;
+	yaxis.mAutoScaleMin = false;
+	yaxis.mLabel = "„Åì„Çì„Å´„Å°„ÅØ‰∏ñÁïå";
+
+	auto &grid = app->pi.plot.mGridInfo;
+	grid.mXGridOn = true;
+	grid.mYGridOn = true;
+
 }
 
-//Å@çƒï`âÊÇÃñ{èàóù
+//„ÄÄÂÜçÊèèÁîª„ÅÆÊú¨Âá¶ÁêÜ
 void redraw(Application *app, int view_width, int view_height, void *dibsect) {
-	typedef mist::bgra<uint8_t> dibcolor_type;
 
 	auto &ca = app->vi.ca;
 
-	mist::array2<dibcolor_type> canvas(view_width, view_height, static_cast<dibcolor_type *>(dibsect), view_width * view_height * 4);
-	canvas.fill(dibcolor_type(255, 255, 255));
+	canvas_type canvas(view_width, view_height, static_cast<canvas_color_type *>(dibsect), view_width * view_height * 4);
+	canvas.fill(canvas_color_type(255, 255, 255));
 
-	// ÉvÉçÉbÉgÉGÉäÉAÇ÷ÇÃï`âÊ
+	// „Éó„É≠„ÉÉ„Éà„Ç®„É™„Ç¢„Å∏„ÅÆÊèèÁîª
 	{
-		// ÉvÉçÉbÉgÉGÉäÉAÇÃÉTÉCÉYÇ™ width_plotarea, height_plotarea Ç…Ç»ÇÈÇÊÇ§Ç…ÅAÉGÉäÉAÇÃ1ÉsÉNÉZÉãäOë§Ç…ògÇï`Ç≠ÅB
-		mist::draw_rect(canvas, ca.plotarea_left - 1, ca.plotarea_top - 1, view_width - ca.offset_right, view_height - ca.offset_bottom, dibcolor_type(0, 0, 0));
+		// „Éó„É≠„ÉÉ„Éà„Ç®„É™„Ç¢„ÅÆ„Çµ„Ç§„Ç∫„Åå width_plotarea, height_plotarea „Å´„Å™„Çã„Çà„ÅÜ„Å´„ÄÅ„Ç®„É™„Ç¢„ÅÆ1„Éî„ÇØ„Çª„É´Â§ñÂÅ¥„Å´Êû†„ÇíÊèè„Åè„ÄÇ
+		mist::draw_rect(canvas, ca.plotarea_left - 1, ca.plotarea_top - 1, view_width - ca.offset_right, view_height - ca.offset_bottom, canvas_color_type(0, 0, 0));
 
-		// âÊëúï`âÊ nearest neighbor ì‡ë}
+		// ÁîªÂÉèÊèèÁîª nearest neighbor ÂÜÖÊåø
 		int dx = -ca.plotarea_left + app->vi.image_dx + app->vi.grab_dx, dy = -ca.plotarea_top + app->vi.image_dy + app->vi.grab_dy;
 		double inv_zoom = 1.0 / app->vi.zoom;
 		for (int j = ca.plotarea_top; j < ca.plotarea_top + ca.plotarea_height; ++j) {
@@ -111,20 +237,20 @@ void redraw(Application *app, int view_width, int view_height, void *dibsect) {
 			}
 		}
 	
-		// ÉeÉLÉXÉgï`âÊ
-		wchar_t txt[] = L"Ç±ÇÒÇ…ÇøÇÕê¢äE";
-		app->fr.render(txt, 12, false, false, true);
-		auto text_img = reinterpret_cast<const mist::rgb<uint8_t> *>(app->fr.get_image());
-		for (int j = 0; j < app->fr.get_height(); ++j) {
-			auto *text_img_j = text_img + j * app->fr.get_width();
-			auto canvas_j = canvas.y_begin(j);
-			for (int i = 0; i < app->fr.get_width(); ++i) {
-				canvas_j[i] = text_img_j[i];
-			}
+		// Ëª∏„ÅÆÊèèÁîª
+		app->pi.painter.canvas = &canvas;
+		{
+			double inv_zoom = 1.0 / app->vi.zoom;
+			auto &xaxis = app->pi.plot.mXAxisSetup;
+			xaxis.SetMin(static_cast<float>((app->vi.image_dx + app->vi.grab_dx) * inv_zoom));
+			xaxis.SetMax(static_cast<float>((app->vi.image_dx + app->vi.grab_dx + ca.plotarea_width) * inv_zoom));
+			app->pi.plot.mXTickIterator->AdjustRange(xaxis.mMin, xaxis.mMax);
+			auto &yaxis = app->pi.plot.mYAxisSetup;
+			yaxis.SetMin(static_cast<float>((app->vi.image_dy + app->vi.grab_dy) * inv_zoom));
+			yaxis.SetMax(static_cast<float>((app->vi.image_dy + app->vi.grab_dy + ca.plotarea_height) * inv_zoom));
+			app->pi.plot.mYTickIterator->AdjustRange(yaxis.mMin, yaxis.mMax);
 		}
-
-		// Todo:É}Å[ÉJÅ[ï`âÊ
-
+		app->pi.plot.Draw(app->pi.painter);
 	}
 }
 
