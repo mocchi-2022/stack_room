@@ -1,0 +1,59 @@
+==========
+ * embree
+ * oneTBB
+   Copyright Intel
+   Apache License Version 2.0
+
+==========
+ * opennurbs
+   Copyright (c) 1993-2013 Robert McNeel & Associates
+   see opennurbs_20130711/readme.txt
+
+==========
+ * librply
+   Copyright © 2003-2015 Diego Nehab.
+   MIT License
+
+==========
+ * SIMDxorshift
+   https://github.com/lemire/SIMDxorshift
+   Apache License Version 2.0
+
+==========
+ * libgd
+   see libgd-gd-2.3.1/COPYING and CONTRIBUTORS
+
+==========
+ * libtiff
+   Copyright (c) 1988-1997 Sam Leffler
+   Copyright (c) 1991-1997 Silicon Graphics, Inc.
+   see libtiff-3.9.4/README
+
+==========
+ * libpng
+   see libpng-1.5.1/LICENSE
+
+==========
+ * zlib
+   (C) 1995-2017 Jean-loup Gailly and Mark Adler
+   see zlib-1-2-11/zlib/README
+
+==========
+ * tinyexr
+   Copyright (c) 2014 - 2021, Syoyo Fujita and many contributors.
+   3-Clause BSD License
+
+==========
+ * JSON for Modern C++
+   Copyright (c) 2013-2022 Niels Lohmann
+   MIT License
+
+==========
+ * thpool
+   Johan Hanssen Seferidis
+   MIT License
+
+==========
+ * MIST
+   Copyright (c) 2003-2010, MIST Project, Nagoya University
+   3-Clause BSD License
