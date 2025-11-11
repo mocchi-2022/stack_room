@@ -1,0 +1,190 @@
+{
+  "color_mode": "sRGB",
+  "environment":{
+	"path": "autumn_hockey_4k.exr",
+	"multiplier": 1,
+	"zenith_dir": [0,  1,  0],
+	"center_dir": [0,  0,  1]
+  },
+  "cameras":[
+  {
+    "projection_mode": "perspective",
+	"origin":    [-10,  60, 200],
+	"eye_dir":   [0,  0, -1],
+	"horz_dir":  [-1, 0,  0],
+	"vert_dir":  [0,  1,  0],
+	"pixel_width":  1200,
+	"pixel_height":  800,
+	"horz_range": 60.0,
+	"vert_range": 40.0,
+	"far": 50.0,
+	"pass": 2500,
+	"output_filename": "image_all.tif"
+  },
+  {
+    "projection_mode": "perspective",
+	"origin":    [ 0,  45, 100],
+	"eye_dir":   [0,  0, -1],
+	"horz_dir":  [-1, 0,  0],
+	"vert_dir":  [0,  1,  0],
+	"pixel_width":  1200,
+	"pixel_height":  800,
+	"horz_range": 30.0,
+	"vert_range": 20.0,
+	"far": 50.0,
+	"pass": 2500,
+	"output_filename": "image_jug.tif"
+  },
+  {
+    "projection_mode": "perspective",
+	"origin":    [ 40,  45, 130],
+	"eye_dir":   [0,  0, -1],
+	"horz_dir":  [-1, 0,  0],
+	"vert_dir":  [0,  1,  0],
+	"pixel_width":  1200,
+	"pixel_height":  800,
+	"horz_range": 30.0,
+	"vert_range": 20.0,
+	"far": 50.0,
+	"pass": 2500,
+	"output_filename": "image_vase.tif"
+  }
+  ],
+  "materials":[
+    {
+      "name": "METAL_POLISHED",
+	  "roughness_alpha"    :  0.0,
+      "constant_ref_ratio" :  0.9,
+      "ior"                :  1.5,
+      "transmittance"      :    0
+    },
+    {
+      "name": "METAL_ROUGH",
+	  "roughness_alpha"    :  0.05,
+      "constant_ref_ratio" :  0.8,
+      "ior"                :  1.0,
+      "transmittance"      :    0
+    },
+    {
+      "name": "BLUE_GLASS",
+	  "roughness_alpha"    :    0.0,
+      "constant_ref_ratio" :      0,
+      "ior"                :    1.5,
+      "transmittance"      :    1.0,
+      "absorption_coef"    : [10000.0, 10000.0, 0.0002]
+    },
+    {
+      "name": "GLASS",
+	  "roughness_alpha"    :     0.0,
+      "constant_ref_ratio" :       0,
+      "ior"                :     1.5,
+      "transmittance"      :     1.0,
+      "absorption_coef"    : [0.0002, 0.0002, 0.0002]
+    },
+    {
+      "name": "GLASS_ROUGH",
+	  "roughness_alpha"    :   0.002,
+      "constant_ref_ratio" :       0,
+      "ior"                :     1.5,
+      "transmittance"      :     1.0,
+      "absorption_coef"    : [0.0002, 0.0002, 0.0002]
+    },
+    {
+      "name": "BLACK_POLISHED",
+	  "roughness_alpha"    :  0.0,
+      "constant_ref_ratio" :  0.0,
+      "ior"                :  1.5,
+      "transmittance"      :    0
+    },
+    {
+      "name": "BLACK_MATTE",
+	  "roughness_alpha"    :  0.1,
+      "constant_ref_ratio" :  0.0,
+      "ior"             :  1.5,
+      "transmittance"   :    0
+    },
+    {
+      "name": "WOOD_MATTE",
+	  "roughness_alpha"    :  0.5,
+      "constant_ref_ratio" :  0.0,
+      "ior"             :  1.3,
+      "transmittance"   :    0,
+	  "diffuse_color"   : [0.25, 0.05, 0.00]
+    },
+    {
+      "name": "GRAY_POLISHED",
+	  "roughness_alpha"    :  0.0,
+      "constant_ref_ratio" :  0.0,
+      "ior"             :  1.5,
+      "transmittance"   :    0,
+	  "diffuse_color"   : [0.5, 0.5, 0.5]
+    },
+    {
+      "name": "WHITE_POLISHED",
+	  "roughness_alpha"    :  0.0,
+      "constant_ref_ratio" :  0.0,
+      "ior"             :  1.5,
+      "transmittance"   :    0,
+	  "diffuse_color"   : [1.0, 1.0, 1.0]
+    },
+    {
+      "name": "WHITE_MATTE",
+	  "roughness_alpha"    :  0.5,
+      "constant_ref_ratio" :  0.0,
+      "ior"             :  1.5,
+      "transmittance"   :    0,
+	  "diffuse_color"   : [1.0, 1.0, 1.0]
+    },
+    {
+      "name": "ABSORBER",
+	  "roughness_alpha"    :  0.0,
+      "constant_ref_ratio" :    0,
+      "ior"             :  1.0,
+      "transmittance"   :    0
+    }
+  ],
+  "shapes":[
+    {
+      "filename": "outdoor_table_chair_set_01_4k.ply",
+      "material": "WOOD_MATTE",
+	  "face_direction": "outer",
+	  "scale": 1.0,
+	  "position": [ 25, -40, 50]
+    },
+    {
+      "filename": "jug_01_4k.ply",
+      "material": "WHITE_POLISHED",
+	  "face_direction": "outer",
+	  "scale": 1.0,
+	  "position": [  0, 32.5, 60]
+    },
+    {
+      "filename": "brass_vase_02_4k.ply",
+      "material": "METAL_ROUGH",
+	  "face_direction": "outer",
+	  "scale": 1.0,
+	  "position": [ 40, 32.5, 50]
+    },
+    {
+      "filename": "brass_vase_03_4k.ply",
+      "material": "BLUE_GLASS",
+	  "face_direction": "outer",
+	  "scale": 1.0,
+	  "position": [ 33, 32.5, 78]
+    },
+    {
+      "filename": "brass_vase_03_4k.ply",
+      "material": "GLASS_ROUGH",
+	  "face_direction": "outer",
+	  "scale": 1.0,
+	  "position": [ 25, 32.5, 81]
+    },
+    {
+      "filename": "brass_vase_03_4k.ply",
+      "material": "GLASS",
+	  "face_direction": "outer",
+	  "scale": 1.0,
+	  "position": [ 17, 32.5, 78]
+    }
+  ]
+}
